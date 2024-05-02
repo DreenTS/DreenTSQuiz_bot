@@ -4,7 +4,7 @@ import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from database import create_table
+from database import create_table, update_database, get_from_user
 
 # Диспетчер
 DP = Dispatcher()
@@ -44,6 +44,29 @@ async def cmd_continue(message: types.Message):
     await continue_quiz(message)
 
 
+async def new_quiz(message):
+    # получаем id пользователя, отправившего сообщение
+    user_id = message.from_user.id
+
+    # сбрасываем значение текущего индекса вопроса квиза в 0
+    current_question_index = 0
+    await update_database(user_id, current_question_index)
+
+    # запрашиваем новый вопрос для квиза
+    await get_question(message, user_id)
+
+
+async def continue_quiz(message):
+    # получаем id пользователя, отправившего сообщение
+    user_id = message.from_user.id
+    current_question_index = await get_from_user(user_id)
+    if current_question_index is not None:
+        # запрашиваем новый вопрос для квиза
+        await get_question(message, user_id)
+    else:
+        await message.answer(text='У Вас нет незавершенных квизов!')
+
+
 # Запуск процесса поллинга новых апдейтов
 async def main():
     # Включаем логирование, чтобы не пропустить важные сообщения
@@ -66,6 +89,5 @@ async def main():
     await DP.start_polling(bot)
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     asyncio.run(main())
