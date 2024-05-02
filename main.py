@@ -7,7 +7,6 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from database import create_table, update_database, get_from_user
 from quiz_data import QUESTIONS, OPTIONS, CORRECT_OPTION_INDEXES
 
-
 # Диспетчер
 DP = Dispatcher()
 
@@ -99,6 +98,46 @@ def generate_options_keyboard(answer_options):
     # Выводим по одной кнопке в столбик
     builder.adjust(1)
     return builder.as_markup()
+
+
+@DP.callback_query(F.data.split('-')[1] == "quiz_answer")
+async def got_answer(callback: types.CallbackQuery):
+    # редактируем текущее сообщение с целью убрать кнопки (reply_markup=None)
+    await callback.bot.edit_message_reply_markup(
+        chat_id=callback.from_user.id,
+        message_id=callback.message.message_id,
+        reply_markup=None
+    )
+
+    # Получение индекса текущего вопроса для данного пользователя
+    current_question_index = await get_from_user(callback.from_user.id)
+
+    # Получение индекса текущего ответа пользователя
+    current_answer_index = int(callback.data.split('-')[0])
+
+    # Отправляем в чат сообщение, что ответ верный
+    if current_answer_index == CORRECT_OPTION_INDEXES[current_question_index]:
+        result = 'Верно!'
+    else:
+        right_answer = OPTIONS[current_question_index][CORRECT_OPTION_INDEXES[current_question_index]]
+        result = f'Неверно! Правильный ответ:\n***{right_answer}***'
+
+    await callback.message.answer(
+        text=f"Ваш ответ:\n***{OPTIONS[current_question_index][current_answer_index]}***\n\n{result}",
+        parse_mode='Markdown'
+    )
+
+    # Обновление номера текущего вопроса в базе данных
+    current_question_index += 1
+    await update_database(callback.from_user.id, current_question_index)
+
+    # Проверяем достигнут ли конец квиза
+    if current_question_index < len(QUESTIONS):
+        # Следующий вопрос
+        await get_question(callback.message, callback.from_user.id)
+    else:
+        # Уведомление об окончании квиза
+        await callback.message.answer(text="Это был последний вопрос. Квиз завершен!")
 
 
 # Запуск процесса поллинга новых апдейтов
