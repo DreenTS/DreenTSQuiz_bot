@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from database import create_table
@@ -22,6 +22,26 @@ async def cmd_start(message: types.Message):
     await message.answer(
         "Добро пожаловать! Можем начать новую игру  или продолжить проходить незаконченный квиз. Что выберете?",
         reply_markup=builder.as_markup(resize_keyboard=True))
+
+
+# Хэндлер на команды /new_quiz
+@DP.message(F.text == "Начать новую игру")
+@DP.message(Command("new_quiz"))
+async def cmd_new_quiz(message: types.Message):
+    # Отправляем новое сообщение без кнопок
+    await message.answer(f"Давайте начнем квиз!")
+    # Запускаем новый квиз
+    await new_quiz(message)
+
+
+# Хэндлер на команды /continue
+@DP.message(F.text == "Продолжить проходить квиз")
+@DP.message(Command("continue"))
+async def cmd_continue(message: types.Message):
+    # Отправляем новое сообщение без кнопок
+    await message.answer(f"Так, на чем же мы остановились...")
+    # Запускаем новый квиз
+    await continue_quiz(message)
 
 
 # Запуск процесса поллинга новых апдейтов
