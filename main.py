@@ -3,8 +3,10 @@ import logging
 import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from database import create_table, update_database, get_from_user
+from quiz_data import QUESTIONS, OPTIONS, CORRECT_OPTION_INDEXES
+
 
 # Диспетчер
 DP = Dispatcher()
@@ -65,6 +67,38 @@ async def continue_quiz(message):
         await get_question(message, user_id)
     else:
         await message.answer(text='У Вас нет незавершенных квизов!')
+
+
+async def get_question(message, user_id):
+    # Запрашиваем из базы текущий индекс для вопроса
+    current_question_index = await get_from_user(user_id)
+    # Получаем список вариантов ответа для текущего вопроса
+    opts = OPTIONS[current_question_index]
+
+    # Функция генерации кнопок для текущего вопроса квиза
+    # В качестве аргументов передаем варианты ответов и значение правильного ответа (не индекс!)
+    kb = generate_options_keyboard(opts)
+    # Отправляем в чат сообщение с вопросом, прикрепляем сгенерированные кнопки
+    await message.answer(text=f"***Вопрос №{current_question_index + 1}:***\n\n{QUESTIONS[current_question_index]}",
+                         reply_markup=kb, parse_mode='Markdown')
+
+
+def generate_options_keyboard(answer_options):
+    # Создаем сборщика клавиатур типа Inline
+    builder = InlineKeyboardBuilder()
+
+    # В цикле создаем Inline кнопки, а точнее Callback-кнопки
+    for index, option in enumerate(answer_options):
+        builder.add(types.InlineKeyboardButton(
+            # Текст на кнопках соответствует вариантам ответов
+            text=option,
+            # Присваиваем данные для колбэк запроса.
+            callback_data=f"{index}-quiz_answer")
+        )
+
+    # Выводим по одной кнопке в столбик
+    builder.adjust(1)
+    return builder.as_markup()
 
 
 # Запуск процесса поллинга новых апдейтов
