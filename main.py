@@ -1,7 +1,10 @@
 import asyncio
 import logging
 import os
-from aiogram import Bot, Dispatcher, types, F
+from datetime import datetime
+from pytz import timezone
+from time import mktime
+from aiogram import Bot, Dispatcher, types, F, BaseMiddleware
 from aiogram.filters import Command
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 import quiz_database
@@ -10,6 +13,19 @@ from quiz_data import QUESTIONS, OPTIONS, CORRECT_OPTION_INDEXES
 
 # Диспетчер
 DP = Dispatcher()
+BOT_START_TIME = mktime(datetime.now(timezone('UTC')).timetuple())
+
+
+class TimeCheckMiddleware(BaseMiddleware):
+
+    async def __call__(self, handler, event, data):
+        msg_time = mktime(event.date.astimezone(timezone('UTC')).timetuple())
+        if msg_time >= BOT_START_TIME:
+            return await handler(event, data)
+
+
+# Устанавливаем middleware
+DP.message.middleware(TimeCheckMiddleware())
 
 
 # Хэндлер на команду /start
@@ -94,7 +110,7 @@ async def cmd_top_10(message: types.Message):
     result = ''
     for i, user in enumerate(users[:10]):
         if user[4] > 0:
-            result += (f'{i + 1}) {user[1]} {"(@" + user[2] + ") " if user[2] else ""}:'
+            result += (f'{i + 1}) {user[1]}{" (@" + user[2] + ")" if user[2] else ""}:'
                        f'\n    ***кол-во баллов:*** {user[3]}'
                        f'\n    ***пройдено квизов:*** {user[4]}\n')
     if result:
