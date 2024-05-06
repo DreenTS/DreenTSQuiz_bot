@@ -42,9 +42,12 @@ async def cmd_start(message: types.Message):
     builder.add(*buttons)
     builder.adjust(3)
     # Прикрепляем кнопки к сообщению
-    await message.answer(
-        text="Добро пожаловать! Можем начать новую игру  или продолжить проходить незаконченный квиз. Что выберете?",
-        reply_markup=builder.as_markup(resize_keyboard=True))
+    image = types.FSInputFile('images/logo.png')
+    await message.answer_photo(
+        image,
+        caption="Добро пожаловать! Можем начать новую игру  или продолжить проходить незаконченный квиз. Что выберете?",
+        reply_markup=builder.as_markup(resize_keyboard=True)
+    )
 
 
 # Хэндлер на команду /info
@@ -110,11 +113,14 @@ async def cmd_top_10(message: types.Message):
     result = ''
     for i, user in enumerate(users[:10]):
         if user[4] > 0:
-            result += (f'{i + 1}) {user[1]}{" (@" + user[2] + ")" if user[2] else ""}:'
+            result += (f'\n{i + 1}) {user[1]}{" (@" + user[2] + ")" if user[2] else ""}:'
                        f'\n    ***кол-во баллов:*** {user[3]}'
                        f'\n    ***пройдено квизов:*** {user[4]}\n')
+
+    result = result.replace('_', '\\_')
+
     if result:
-        result = '***ТОП-10 пользователей по кол-ву баллов, набранных при прохождении квизов:***\n\n' + result
+        result = '***ТОП-10 пользователей по кол-ву баллов, набранных при прохождении квизов:***\n' + result
     else:
         result += 'Ни один пользователь ещё не проходил квизы :('
 
